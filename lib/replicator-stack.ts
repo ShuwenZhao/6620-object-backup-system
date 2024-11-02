@@ -37,7 +37,7 @@ export class ReplicatorStack extends cdk.Stack {
 
         // Grant DynamoDB permissions for put and update actions
         replicatorFn.addToRolePolicy(new iam.PolicyStatement({
-            actions: ['dynamodb:PutItem', 'dynamodb:UpdateItem', 'dynamodb:Query'],
+            actions: ['dynamodb:PutItem', 'dynamodb:UpdateItem', 'dynamodb:Query', 'dynamodb:DeleteItem'],
             resources: [props.tableT.tableArn],
         }));
     }
