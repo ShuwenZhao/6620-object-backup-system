@@ -16,10 +16,11 @@ export class ReplicatorStack extends cdk.Stack {
     super(scope, id, props);
 
     const replicatorFn = new lambda.Function(this, 'ReplicatorFunction', {
-      runtime: lambda.Runtime.NODEJS_18_X,
+      runtime: lambda.Runtime.PYTHON_3_9,
       handler: 'replicator.handler',
       code: lambda.Code.fromAsset('lambda/replicator'),
       environment: {
+        BUCKET_SRC: props.bucketSrc.bucketName,
         BUCKET_DST: props.bucketDst.bucketName,
         TABLE_NAME: props.tableT.tableName,
       },
