@@ -3,7 +3,7 @@ import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 
-export class StorageStack extends cdk.Stack {
+export class StorageStack1 extends cdk.Stack {
   public readonly bucketSrc: s3.Bucket;
   public readonly bucketDst: s3.Bucket;
   public readonly tableT: dynamodb.Table;
