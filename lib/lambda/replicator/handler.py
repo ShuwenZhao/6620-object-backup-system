@@ -8,6 +8,7 @@ s3 = boto3.client('s3')
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(os.environ['TABLE_NAME'])
 
+BUCKET_SRC = os.environ['BUCKET_SRC']
 BUCKET_DST = os.environ['BUCKET_DST']
 
 def handler(event, context):
@@ -24,41 +25,47 @@ def handle_put_event(object_key):
     try:
         # Generate a unique name for the copy with a timestamp
         timestamp = int(datetime.utcnow().timestamp())
-        copy_key = f"{object_key}-{timestamp}"
+        new_copy_key = f"{object_key}-{timestamp}"
 
-        # Copy the object to BucketDst
+        # Step 1: Copy the new object to BucketDst
         s3.copy_object(
             Bucket=BUCKET_DST,
-            CopySource={'Bucket': os.environ['BUCKET_SRC'], 'Key': object_key},
-            Key=copy_key
+            CopySource={'Bucket': BUCKET_SRC, 'Key': object_key},
+            Key=new_copy_key
         )
+        print(f"Copied {object_key} to {BUCKET_DST} as {new_copy_key}")
 
-        # Fetch existing copies in Table T and delete the oldest if more than one exists
+        # Step 2: Query Table T for an existing entry for this object
         response = table.query(
             KeyConditionExpression=boto3.dynamodb.conditions.Key('objectName').eq(object_key)
         )
 
-        if response['Items']:
-            # Sort items by timestamp to find the oldest
-            sorted_items = sorted(response['Items'], key=lambda x: x['timestamp'])
-            if len(sorted_items) > 1:
-                oldest_copy_key = sorted_items[0]['copyObjectKey']
-                # Delete the oldest copy from BucketDst
-                s3.delete_object(Bucket=BUCKET_DST, Key=oldest_copy_key)
-                # Remove the oldest entry from Table T
-                table.delete_item(
-                    Key={'objectName': object_key, 'timestamp': sorted_items[0]['timestamp']}
-                )
+        # Step 3: Delete all older copies in BucketDst and remove the old entries in Table T
+        for item in response['Items']:
+            old_copy_key = item['copyObjectKey']
+            old_timestamp = item['timestamp']
 
-        # Update Table T with the new copy details
+            # Delete the old copy from BucketDst
+            s3.delete_object(Bucket=BUCKET_DST, Key=old_copy_key)
+            print(f"Deleted old copy: {old_copy_key} from {BUCKET_DST}")
+
+            # Remove the old entry from Table T
+            table.delete_item(
+                Key={'objectName': object_key, 'timestamp': old_timestamp}
+            )
+            print(f"Deleted old entry in Table T for {object_key}")
+
+        # Step 4: Add the new entry in Table T for the new copy
         table.put_item(
             Item={
                 'objectName': object_key,
                 'timestamp': timestamp,
-                'copyObjectKey': copy_key,
+                'copyObjectKey': new_copy_key,
                 'status': 'ACTIVE',
             }
         )
+        print(f"Added new copy to Table T for {object_key}")
+
     except ClientError as e:
         print(f"Error handling PUT event for {object_key}: {e}")
 
