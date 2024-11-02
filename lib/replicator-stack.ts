@@ -17,7 +17,7 @@ export class ReplicatorStack extends cdk.Stack {
 
         const replicatorFn = new lambda.Function(this, 'ReplicatorFunction', {
             runtime: lambda.Runtime.PYTHON_3_9,
-            handler: 'replicator.handler',
+            handler: 'handler.handler',
             code: lambda.Code.fromAsset('lib/lambda/replicator'),
             environment: {
                 BUCKET_SRC: props.bucketSrc.bucketName,
@@ -35,6 +35,10 @@ export class ReplicatorStack extends cdk.Stack {
             ],
         }));
 
-        props.tableT.grantReadWriteData(replicatorFn);
+        // Grant DynamoDB permissions for put and update actions
+        replicatorFn.addToRolePolicy(new iam.PolicyStatement({
+            actions: ['dynamodb:PutItem', 'dynamodb:UpdateItem', 'dynamodb:Query'],
+            resources: [props.tableT.tableArn],
+        }));
     }
 }

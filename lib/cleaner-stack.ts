@@ -18,7 +18,7 @@ export class CleanerStack extends cdk.Stack {
 
         const cleanerFn = new lambda.Function(this, 'CleanerFunction', {
             runtime: lambda.Runtime.PYTHON_3_9,
-            handler: 'cleaner.handler',
+            handler: 'handler.handler',
             code: lambda.Code.fromAsset('lib/lambda/cleaner'),
             environment: {
                 BUCKET_DST: props.bucketDst.bucketName,
